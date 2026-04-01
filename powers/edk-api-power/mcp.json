@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "postman": {
+      "command": "npx",
+      "args": [
+        "@postman/postman-mcp-server",
+        "--full"
+      ],
+      "env": {
+        "POSTMAN_API_KEY": "YOUR_POSTMAN_API_KEY"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "getAuthenticatedUser"
+      ]
+    }
+  }
+}

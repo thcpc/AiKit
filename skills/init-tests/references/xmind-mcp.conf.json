@@ -1,0 +1,14 @@
+{
+    "xmind-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@41px/mcp-xmind",
+        "${pwd}\\testcases\\design"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [],
+      "transport": "stdio"
+    }
+}
