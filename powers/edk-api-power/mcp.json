@@ -13,6 +13,21 @@
       "autoApprove": [
         "getAuthenticatedUser"
       ]
+    },
+    "swagger": {
+      "command": "npx",
+      "args": [
+        "@awssam/mcp-swagger"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "getEndpointDetails",
+        "getSchemas",
+        "listEndpoints",
+        "searchEndpoints",
+        "getApiInfo",
+        "listTags"
+      ]
     }
   }
 }
