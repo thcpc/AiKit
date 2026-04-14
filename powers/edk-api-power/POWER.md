@@ -1,7 +1,7 @@
 ---
 name: "edk-api-power"
 displayName: "EDK API Power"
-description: "引导用户创建 API 操作定义文件（*.api-plan.md），并通过 Postman MCP 在 Postman 桌面客户端中自动创建 Collection。支持 Swagger 定义解析、API 顺序编排和数据自动传递。"
+description: "本工具可分析 HAR 文件并计算路径依赖，依据用户输入与分析结果生成 API 操作定义文件（*.api-plan.md），通过 Postman MCP 在客户端自动生成接口集合，支持 Swagger 解析、API 顺序编排、数据自动传递，并可导出 Postman 集合 JSON 完成同步"
 keywords: ["edk", "api", "postman", "collection", "swagger", "api-plan"]
 author: "PengchengChen"
 ---
