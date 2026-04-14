@@ -173,6 +173,14 @@
    - **Onboard 接口的筛选条件参数**：onboard/applications 返回的嵌套结构中，用户需要指定 company、applicationName、sponsor、lifecycle、study 等名称来匹配对应的 ID，这些名称是用户输入参数
    - **数组元素中的 ID 字段（关键，易遗漏）**：当目标接口 body 中包含数组类型字段（如 `codeListVariables[]`、`items[]`）时，必须逐一检查数组元素内部的每个 `id` 字段。不能因为已获取了父级 ID（如 `codelistId`）就认为相关依赖已全部解决。数组元素中的 `id` 往往来自一个独立的"详情查询接口"（如 `GET /codeList?id={codelistId}` 返回的 `items[].id`），需要额外的前置调用。在 HAR 文件中搜索这些 id 值出现在哪个接口的响应中，可以帮助发现遗漏的前置接口。
 
+5. **分析 HAR 页面导航路径中的隐含前置接口（关键，不可遗漏）**：
+   不能只做"目标接口 body 参数的反向溯源"。还必须分析 HAR 中目标接口请求的 Referer URL 和接口调用顺序，识别出那些虽然不直接出现在目标接口参数中、但属于业务流程必经步骤的前置查询接口。
+   - **分析 Referer URL 路径层级**：目标接口请求的 Referer URL 通常包含完整的页面导航路径（如 `site-list/{siteId}/subject-list/siteId_{siteId}-subjectId_{subjectId}-visitId_{visitId}-formId_{formId}`），每一层路径通常对应一个用户选择步骤和一个前置查询接口
+   - **追踪 HAR 中的接口调用链**：检查目标接口之前的 API 调用序列，识别那些返回列表数据、且其路径参数被后续接口使用的接口（如 `study-site/list` → `study-site/{siteId}/subject/list` → `subject/{subjectId}/visit/list`）
+   - **常见遗漏模式**：某个前置查询接口（如 `study-site/list`）的产出 ID（如 `siteId`）不直接出现在目标接口的 Request Body 中，而是作为中间查询接口（如 `study-site/{siteId}/subject/list`）的路径参数。由于目标接口 body 中没有 `siteId`，仅做 body 参数反向溯源时会遗漏这个前置步骤
+   - **判断方法**：对 HAR 中目标接口之前的每个列表查询接口，检查其路径参数是否来自更前面的列表接口。如果存在 A → B → C 的链式依赖（A 的产出是 B 的路径参数，B 的产出是 C 的路径参数），则整条链都必须纳入调用链，即使 A 的产出不直接出现在目标接口中
+   - **示例**：`edc/study-site/list` 返回 siteId，`edc/study-site/{siteId}/subject/list` 使用 siteId 返回 subjectId。虽然目标接口 `form/{formId}/save` 的 body 中没有 siteId，但 siteId 是获取 subjectId 的必要前置条件，因此 `study-site/list` 不能省略，`siteName` 必须作为用户输入
+
 ### 步骤 4：构建完整调用链
 
 按以下优先级排序：
@@ -338,6 +346,13 @@ Step N (接口路径) [需要: 前置数据]
    - 如果发现 Schema 中存在的 property 既未出现在 User Input Data 中，也未在 Data Flow 中标注来源，则该字段被遗漏，必须补充
    - **特别关注嵌套对象中的字段**：如 `definition.cdashVariable`、`definition.sdtmLabel`、`generate.sasFieldName` 等，这些字段容易在主观筛选中被遗漏
    - 如果发现遗漏字段，在自检结果中标注 `⚠️ 目标接口字段遗漏` 并列出遗漏的字段名
+12. **HAR 页面导航路径中的隐含前置接口未被遗漏**：不能只做"目标接口 body 参数的反向溯源"，还必须分析 HAR 中的 Referer URL 和接口调用顺序，识别出那些虽然不直接出现在目标接口参数中、但属于业务流程必经步骤的前置查询接口。具体检查：
+   - 检查 HAR 中目标接口请求的 Referer URL，解析其中的路径层级（如 `site-list/{siteId}/subject-list/siteId_{siteId}-subjectId_{subjectId}-visitId_{visitId}-formId_{formId}`），每一层路径通常对应一个用户选择步骤和一个前置查询接口
+   - 检查 HAR 中目标接口之前的 API 调用序列，识别那些返回列表数据、且其路径参数被后续接口使用的接口（如 `study-site/list` → `study-site/{siteId}/subject/list` → `subject/{subjectId}/visit/list`）
+   - **常见遗漏模式**：某个前置查询接口（如 `study-site/list`）的产出 ID（如 `siteId`）不直接出现在目标接口的 Request Body 中，而是作为中间查询接口（如 `study-site/{siteId}/subject/list`）的路径参数。由于目标接口 body 中没有 `siteId`，仅做 body 参数反向溯源时会遗漏这个前置步骤
+   - **判断方法**：对 HAR 中目标接口之前的每个列表查询接口，检查其路径参数是否来自更前面的列表接口。如果存在 A → B → C 的链式依赖（A 的产出是 B 的路径参数，B 的产出是 C 的路径参数），则整条链都必须纳入调用链，即使 A 的产出不直接出现在目标接口中
+   - **示例**：`edc/study-site/list` 返回 siteId，`edc/study-site/{siteId}/subject/list` 使用 siteId 返回 subjectId。虽然目标接口 `form/{formId}/save` 的 body 中没有 siteId，但 siteId 是获取 subjectId 的必要前置条件，因此 `study-site/list` 不能省略，`siteName` 必须作为用户输入
+   - 如果发现遗漏的导航前置接口，在自检结果中标注 `⚠️ HAR 导航路径前置接口遗漏` 并补充该接口到调用链中
 
 如果自检发现问题，在输出文件末尾添加 `## ⚠️ 自检问题` 章节列出。
 
@@ -372,7 +387,8 @@ Step N (接口路径) [需要: 前置数据]
 4. **区分必需前置和可选前置**：认证链和提供参数的接口是必需前置
 5. **Authorization header 不加任何前缀**：所有 Authorization 值直接使用 token 变量（如 `{{admin_token}}`）
 6. **用户输入参数必须标注**：所有无法自动获取的参数用 🔸 标记
-7. **请严格按照步骤舒徐**
+7. **分析 HAR 导航路径中的隐含前置接口**：不能只做目标接口 body 参数的反向溯源，还必须分析 HAR 中 Referer URL 的路径层级和接口调用顺序，识别那些不直接出现在目标接口参数中、但属于业务流程必经步骤的前置查询接口（如 `study-site/list` 之于 `siteId`）
+8. **请严格按照步骤顺序**
 
 ---
 

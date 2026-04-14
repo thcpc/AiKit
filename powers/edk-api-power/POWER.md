@@ -18,6 +18,8 @@ EDK API Power 是一个引导式 MCP Power，提供以下核心工作流：
 4. **生成 Postman JSON 文件（Generator）** — 读取 `*.api-plan.md` 文件，在本地生成按接口拆分的 JSON 文件，征求用户确认后再同步到 Postman。
 5. **启动加密服务** — 启动本地加密服务（`scripts/encrypt-server.js`），为 Admin Auth 等需要密码加密的接口提供 RSA 加密支持。
 6. **API Repository 管理（Manager）** — 管理本地接口仓库 `apiRepository/`，对 Generator 生成的 JSON 文件进行新增、更新、查询、删除操作，实现接口复用。
+7. **调试修复（Healer）** — 调试和修改已生成的 Postman Collection，支持仅修改 JSON 或同步修改 Plan + JSON + Postman。
+8. **HAR 瘦身（Trimer）** — 使用 `har_trim.py` 删除 HAR 文件中的 JS 调用栈信息，减小文件体积。
 
 ## Available Steering Files
 
@@ -27,6 +29,8 @@ EDK API Power 是一个引导式 MCP Power，提供以下核心工作流：
 - **generator** — 读取 `*.api-plan.md` 文件，生成本地 JSON 文件（按接口拆分），征求用户确认后再同步到 Postman
 - **manager** — 管理 apiRepository 本地接口仓库，提供接口 JSON 文件的新增、更新、查询、删除操作
 - **encrypt-service** — 启动加密服务并在 API 调用中使用密码加密的工作流
+- **healer** — 调试和修改已生成的 Postman Collection，支持仅修改 JSON 同步到 Postman，或同步修改 Plan + JSON + Postman
+- **trimer** — 使用 har_trim.py 对 HAR 文件进行瘦身，删除 _initiator.stack 字段减小体积
 
 ## Onboarding
 
