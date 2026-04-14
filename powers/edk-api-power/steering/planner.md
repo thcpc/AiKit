@@ -2,19 +2,58 @@
 
 ## 概述
 
-本工作流引导用户创建 `*.api-plan.md` 格式的 API 操作定义文件。通过分析 Postman Collection JSON 文件，自动提取目标接口的前置依赖链、数据流和用户输入参数，直接生成 api-plan.md 文件。
+本工作流引导用户创建 `*.api-plan.md` 格式的 API 操作定义文件。通过分析 Postman Collection JSON 文件或 Chrome 导出的 HAR 文件，自动提取目标接口的前置依赖链、数据流和用户输入参数，直接生成 api-plan.md 文件。
 
 ---
 
 ## 步骤 1：收集基本信息并提取 API 请求
 
-通过对话了解用户的需求：
+### 优先从 *.api-form.md 提取信息
+
+如果用户提供了 `*.api-form.md` 文件（如 `questionnaire.api-form.md`），优先从中提取关键信息：
+
+1. **读取 api-form 文件**：解析 Markdown 内容，提取以下字段：
+   - `## 场景名称` → 场景名称（用于文件命名）
+   - `## Swagger` → Swagger/OpenAPI 文档 URL 列表
+   - `## BaseURL` → 各服务的基础 URL
+   - `## 接口名` → 目标接口路径
+   - `### 接口类型` → HTTP method（POST/GET/DELETE 等，通过 `[x]` 标记识别）
+   - `## 引用数据` → 可选的参考文件路径（Postman Collection JSON 或 HAR 文件）
+
+2. **验证信息完整性**：检查以下必需字段是否已填写（非空且非示例占位符）：
+   - 场景名称 — 必需
+   - Swagger 地址 — 必需（至少一个有效 URL）
+   - BaseURL — 必需（至少一个有效 URL）
+   - 接口名 — 必需
+   - 接口类型 — 必需
+
+3. **信息不足时的处理**：
+   - 如果 api-form 中缺少必需字段，通过对话向用户补充询问缺失的部分
+   - 不要重新生成问卷，直接询问缺失项
+
+4. **信息充足时直接进入分析**：将提取的信息作为步骤 1 的输入，跳过对话收集环节，直接进入步骤 2
+
+### 通过对话收集信息（无 api-form 时）
+
+如果用户未提供 `*.api-form.md` 文件，通过对话了解用户的需求：
 
 1. **场景名称** — 这个 API 操作场景叫什么？（用于文件命名，如 `user-onboard`）
 2. **Swagger 地址** — 提供一个或多个 Swagger/OpenAPI 文档的 URL
 3. **BaseURL** — 每个服务的基础 URL，格式为 `{ServiceName}BaseUrl: {url}`
-4. **Postman Collection JSON 文件** — 用户提供 `*.postman_collection.json` 文件路径
+4. **请求来源文件** — 用户提供以下任一格式的文件：
+   - `*.postman_collection.json` — Postman Collection JSON 文件
+   - `*.har` — Chrome DevTools 导出的 HAR（HTTP Archive）文件
 5. **目标接口** — 用户指定要分析哪个接口的前置条件
+
+**注意**：如果用户提供的信息不足（缺少两项或以上必需信息），应建议用户使用 Surveyor 工作流生成问卷文件，而非通过多轮对话逐一询问。
+
+### 文件格式自动识别
+
+根据文件扩展名或内容自动判断格式：
+- **Postman Collection JSON**：文件包含 `"info"` 和 `"item"` 顶层字段，`item` 是请求数组
+- **HAR 文件**：文件包含 `"log"` 顶层字段，`log.entries` 是请求数组
+
+### 从 Postman Collection JSON 提取请求
 
 从 JSON 文件的 `item` 数组中提取所有 API 请求，过滤掉非 API 请求（静态资源 `.svg`、`.json` 翻译文件、`segment.io`、`mixpanel.com` 等第三方服务），记录每个请求的：
 - 序号（在 Collection 中的出现顺序）
@@ -22,6 +61,77 @@
 - HTTP method
 - Authorization header 的值（token 前缀揭示服务类型，如 `Admin`、`DESIGN`、`PROCHECK`）
 - Request body（如有）
+
+### 从 HAR 文件提取请求
+
+从 HAR 文件的 `log.entries` 数组中提取所有 API 请求。HAR 文件结构如下：
+
+```json
+{
+  "log": {
+    "entries": [
+      {
+        "request": {
+          "method": "POST",
+          "url": "http://example.com/api/admin/auth",
+          "headers": [
+            { "name": "Authorization", "value": "Admin xxx" },
+            { "name": "Content-Type", "value": "application/json" }
+          ],
+          "postData": {
+            "mimeType": "application/json",
+            "text": "{\"userName\":\"CPC01\",\"password\":\"encrypted\"}"
+          }
+        },
+        "response": {
+          "status": 200,
+          "content": {
+            "mimeType": "application/json",
+            "text": "{\"procCode\":200,\"payload\":{\"token\":\"xxx\"}}"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**HAR 提取规则：**
+- 从 `entry.request.url` 提取完整 URL
+- 从 `entry.request.method` 提取 HTTP 方法
+- 从 `entry.request.headers` 数组中查找 `Authorization` header（`name` 字段匹配，不区分大小写）
+- 从 `entry.request.postData.text` 提取请求体（仅当 `mimeType` 包含 `json` 时）
+- **HAR 额外优势**：`entry.response.content.text` 包含真实的响应数据，可用于验证 Swagger Response 结构的准确性
+
+**HAR 过滤规则（与 Postman Collection 相同）：**
+- 过滤掉静态资源请求（URL 包含 `.js`、`.css`、`.svg`、`.png`、`.jpg`、`.woff`、`.ttf`）
+- 过滤掉翻译文件（URL 包含 `translations.json`、`i18n`）
+- 过滤掉第三方服务（URL 包含 `segment.io`、`mixpanel.com`、`google-analytics`、`sentry.io`）
+- 过滤掉 HTML 页面请求（Content-Type 为 `text/html`）
+- 仅保留 API 请求（URL 路径包含 `/api/` 或响应 Content-Type 为 `application/json`）
+
+**HAR 字段映射到统一格式：**
+
+| 统一字段 | Postman Collection | HAR |
+|---------|-------------------|-----|
+| URL | `request.url.raw` | `request.url` |
+| Method | `request.method` | `request.method` |
+| Headers | `request.header[]` (key/value) | `request.headers[]` (name/value) |
+| Body | `request.body.raw` | `request.postData.text` |
+| Authorization | `header[key="Authorization"].value` | `headers[name="Authorization"].value` |
+
+### 步骤 1.5：验证目标接口是否存在
+
+在进入分析之前，必须先验证用户指定的目标接口在 Swagger 中是否存在：
+
+1. **使用 mcp-swagger 搜索目标接口**：调用 `searchEndpoints` 工具，以用户提供的接口名（如 `crf/tem`）作为关键词搜索
+2. **精确匹配检查**：检查搜索结果中是否存在与用户指定的接口路径完全匹配（或去掉服务前缀后匹配）的端点
+3. **如果找不到目标接口**：
+   - **立即停止**，不要继续后续步骤
+   - 向用户提示：`在 Swagger 中未找到接口 "{用户提供的接口名}"，请检查接口名是否正确。修改 questionnaire.api-form.md 中的接口名后，再告诉我重新创建 Plan。`
+   - 如果搜索结果中有相似的接口路径，一并列出供用户参考。例如：`你是否要找以下接口？\n- /crf/item (POST) — create a item\n- /crf/items/{formId} (GET) — get all items`
+   - **禁止猜测或自动替换接口名**，必须等用户确认
+4. **如果找到目标接口**：记录其完整路径和 HTTP method，继续进入步骤 2
 
 ### 步骤 2：识别认证链
 
@@ -61,6 +171,7 @@
    - **Token 类型参数**：追踪 Authorization header 的来源
    - **用户输入参数**（如 `controlType: "Text"`、`name: "TT"`、`caption: "Test1"`）：标记为 🔸用户输入
    - **Onboard 接口的筛选条件参数**：onboard/applications 返回的嵌套结构中，用户需要指定 company、applicationName、sponsor、lifecycle、study 等名称来匹配对应的 ID，这些名称是用户输入参数
+   - **数组元素中的 ID 字段（关键，易遗漏）**：当目标接口 body 中包含数组类型字段（如 `codeListVariables[]`、`items[]`）时，必须逐一检查数组元素内部的每个 `id` 字段。不能因为已获取了父级 ID（如 `codelistId`）就认为相关依赖已全部解决。数组元素中的 `id` 往往来自一个独立的"详情查询接口"（如 `GET /codeList?id={codelistId}` 返回的 `items[].id`），需要额外的前置调用。在 HAR 文件中搜索这些 id 值出现在哪个接口的响应中，可以帮助发现遗漏的前置接口。
 
 ### 步骤 4：构建完整调用链
 
@@ -102,6 +213,15 @@ Step N (接口路径) [需要: 前置数据]
 - 布尔开关字段（如 `required`、`detailsField`）
 - 固定配置字段（如 `length`、`recordIds`）
 
+**禁止主观筛选字段（关键，不可违反）：**
+
+必须严格遍历目标接口 Request Body Schema 中的**每一个 property**（包括嵌套 `$ref` 引用展开后的所有子 property），逐一判断其来源。禁止凭"常用"或"重要"等主观判断跳过任何字段。具体要求：
+1. **完整展开所有 `$ref` 引用**：如果 Request Body 包含 `$ref` 引用（如 `definition: $ref CrfItemDefinitionDto`），必须递归展开该 Schema，遍历其中的每一个 property
+2. **逐字段判断来源**：对展开后的每一个 property，判断它是"前置接口自动获取"还是"用户输入 🔸"
+3. **全部列入 User Input Data**：所有判断为用户输入的字段，无论是否"看起来重要"，都必须列入 User Input Data 表格。不允许以"该字段可选"、"该字段不常用"、"该字段可以为空"等理由省略
+4. **特别注意 variable 和 label 类字段**：Schema 中的 `cdashVariable`、`cdashLabel`、`sdtmVariable`、`sdtmLabel`、`sasFieldName`、`sdsVarName` 等 variable/label 字段是常见的遗漏对象，必须逐一检查并列入
+5. **嵌套对象的字段使用点号表示法**：如 `definition.cdashVariable`、`generate.controlType`，确保层级关系清晰
+
 **基于 Swagger Response 结构判断参数是否可自动获取**：判断某个参数是否为用户输入时，必须参考步骤 2-4 中通过 mcp-swagger 或 mcp-fetch fallback 读取的前置接口 Response Schema：
 - 如果前置接口的 Response Schema 中明确包含该字段（如 `id`、`token`），且返回的是单条记录，则该参数可自动获取
 - 如果前置接口的 Response Schema 显示返回的是数组（`type: array`）或嵌套列表结构，则从中提取的 ID 必须标记为 🔸用户输入
@@ -132,7 +252,52 @@ Step N (接口路径) [需要: 前置数据]
 
 在输出的参数来源表中，用 🔸 标记用户输入参数。
 
-### 步骤 7：自检
+**复合参数的特殊处理（关键）：**
+
+当目标接口的 Request Body 中包含**数组类型的复合参数**（如 `definition.codeListVariables`），且该数组的每个元素中**部分字段来自前置接口自动获取、部分字段需要用户填写**时，不要在主表格中简单标注"自动"或"🔸"，而应在主表格之后使用 `#### 复杂参数` 子章节单独列出。
+
+**格式规范：**
+
+```markdown
+#### 复杂参数
+
+##### {参数名}
+
+> 数据来源：{自动获取字段的说明}，{用户填写字段的说明}。
+
+| {用户可见字段1} | {用户填写字段2} | {用户填写字段3} |
+| -------------- | -------------- | -------------- |
+| {值1} | 🔸 | 🔸 |
+| {值2} | 🔸 | 🔸 |
+|  |  |  |
+```
+
+**规则：**
+1. 表格中只列出**用户需要关注的字段**（包括用于识别行的名称字段和需要用户填写的字段）
+2. 自动获取的 ID 字段（如 `id`）不需要出现在表格中，在 `> 数据来源` 说明中描述即可
+3. 表格末尾保留一行空行，方便用户添加更多行
+4. 如果用户在 api-form 中已提供了具体值，直接填入表格；否则用 🔸 标记
+
+**示例（codeListVariables）：**
+
+```markdown
+#### 复杂参数
+
+##### codeListVariables
+
+> 数据来源：`id` 和 `name` 从 Step 8.5 `crf/codeList?id={codelistId}` 的 `payload.items` 自动获取，`cdashVariable` 和 `cdashLabel` 需要用户填写。
+
+| name | cdashVariable | cdashLabel |
+| ---- | ------------- | ---------- |
+| Yes | VariableY | LabelY |
+| No | VariableN | LabelN |
+|  |  |  |
+```
+
+**识别复合参数的条件：**
+- Request Body Schema 中存在 `type: array` 的字段
+- 数组元素的 Schema 中同时包含：来自前置接口的字段（如 `id`）和需要用户输入的字段（如 `cdashVariable`）
+- 常见场景：codelist items、variable mappings、rule conditions 等
 
 生成完成后，执行以下自检：
 
@@ -159,6 +324,20 @@ Step N (接口路径) [需要: 前置数据]
    - 数据流中标注的字段类型（单条/数组/嵌套）是否与 Swagger Schema 的 `type` 定义一致
    - 如果 Swagger 定义缺失或不完整，在自检结果中标注 `⚠️ Swagger 定义缺失`，并说明使用了 Collection 中的实际请求作为补充参考
    - 如果使用了 mcp-fetch fallback，在自检结果中标注 `ℹ️ 通过 mcp-fetch fallback 获取 Schema`
+10. **嵌套数组元素中的 ID 字段溯源**：检查目标接口 Request Body 中所有**数组类型字段**（如 `codeListVariables[]`、`items[]`、`records[]`），逐一审查数组元素内部的每个 `id` 字段的数据来源。具体检查：
+   - 遍历 Request Body 中所有 `type: array` 的字段，展开其 `items` Schema
+   - 对数组元素中每个名为 `id` 或以 `Id` 结尾的字段，追问：这个 id 从哪来？是用户直接输入的，还是需要从某个前置接口查询获取？
+   - **常见遗漏模式**：目标接口的某个数组字段（如 `definition.codeListVariables`）中的 `id` 字段，实际来自一个"详情查询接口"（如 `GET /codeList?id={codelistId}`），而非用户直接输入。分析时容易因为已经有了父级 ID（如 `codelistId`）就认为 codelist 相关依赖已解决，忽略了还需要查询子项的 id
+   - **判断方法**：如果数组元素中的 `id` 值是整数且看起来像数据库主键（如 1, 2, 3...），大概率需要从某个详情/列表接口获取，而非用户手动输入
+   - **HAR 交叉验证**：在 HAR 文件中搜索是否存在返回这些 id 值的接口响应，确认是否遗漏了前置查询接口
+   - 如果发现遗漏的前置查询接口，在自检结果中标注 `⚠️ 数组元素 ID 溯源遗漏` 并补充该接口到调用链中
+11. **目标接口 Request Body 字段完整性**：将 User Input Data 中列出的目标接口字段与 Swagger Request Body Schema 的完整 property 列表逐一比对。具体检查：
+   - 从 Swagger 获取目标接口 Request Body 的完整 Schema（递归展开所有 `$ref` 引用）
+   - 列出 Schema 中的所有 property 名称
+   - 逐一确认每个 property 在 User Input Data 中是否已列出（作为 🔸 用户输入）或在 Data Flow 中已标注来源（作为前置接口自动获取）
+   - 如果发现 Schema 中存在的 property 既未出现在 User Input Data 中，也未在 Data Flow 中标注来源，则该字段被遗漏，必须补充
+   - **特别关注嵌套对象中的字段**：如 `definition.cdashVariable`、`definition.sdtmLabel`、`generate.sasFieldName` 等，这些字段容易在主观筛选中被遗漏
+   - 如果发现遗漏字段，在自检结果中标注 `⚠️ 目标接口字段遗漏` 并列出遗漏的字段名
 
 如果自检发现问题，在输出文件末尾添加 `## ⚠️ 自检问题` 章节列出。
 
@@ -172,7 +351,7 @@ Step N (接口路径) [需要: 前置数据]
 4. 从调用链中各接口的 method、body、headers 提取 API Notes
 5. 补充 Swagger 地址和 BaseURL（询问用户或从 Collection 中的 URL 推断）
 6. 生成 Instruction（使用默认模板）
-7. 将 Collection JSON 文件作为 Reference 引用
+7. 将来源文件（Collection JSON 或 HAR 文件）作为 Reference 引用
 8. **文件命名使用场景名称**（步骤 1 中收集的场景名称），格式为 `{场景名称}.api-plan.md`，如 `designer-add-crf-item.api-plan.md`。不要使用 JSON 文件名命名。
 9. 在文件末尾添加 `## ✅ 自检结果` 章节，记录步骤 7 的自检结果
 

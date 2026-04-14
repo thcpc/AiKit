@@ -39,6 +39,48 @@
 如果 API Notes 明确说明某个接口的 body 为 `{}`，则不要添加任何字段。
 如果 API Notes 明确说明某个接口不需要用户名密码，则不要传入。
 
+## 步骤 1.5：检查本地 Generator JSON 文件（最高优先级）
+
+**在通过 Swagger 或自行编写脚本之前，必须先检查工作区中是否存在 Generator 生成的本地 JSON 文件。如果存在，必须严格使用本地 JSON 文件中的内容，禁止自行编写或修改脚本。**
+
+### 检查规则
+
+1. **确定本地文件目录**：根据 api-plan.md 的文件名推断 Generator 输出目录。例如 `design-add-new-item.api-plan.md` 对应目录 `design-add-new-item/`
+2. **检查目录是否存在**：在工作区根目录下查找该目录
+3. **读取所有 JSON 文件**：如果目录存在，读取其中所有 `*.json` 文件（如 `01-auth.json`、`02-user-onboard-company.json`、`_collection.json` 等）
+
+### 使用规则（严格，不可违反）
+
+**当本地 JSON 文件存在时：**
+
+1. **`_collection.json`** — 使用其中的 `variable` 数组作为 Collection Variables 的定义
+2. **每个接口的 JSON 文件**（如 `01-auth.json`、`03-user-onboard-applications.json`）— 严格使用其中的以下内容：
+   - `request.header` → 作为 `headerData`（包括 `Language-Content` 等自定义 header）
+   - `request.body.raw` → 作为 `rawModeData`
+   - `request.method` → 作为 HTTP method
+   - `request.url.raw` → 作为 URL
+   - `event[].script.exec` → 作为 `events` 中的 pre-request script 和 test script
+3. **禁止自行编写脚本**：不要根据 Swagger 定义或 api-plan.md 的 Data Flow 自行编写 pre-request script 或 test script。本地 JSON 文件中的脚本是经过 Generator 精心生成并可能已被用户手动调试过的，自行编写的脚本与本地版本会有差异，导致运行失败
+4. **禁止修改本地脚本内容**：即使你认为本地脚本有改进空间，也不要修改。保持与本地文件 100% 一致
+
+**当本地 JSON 文件不存在时：**
+
+继续执行步骤 2（通过 mcp-swagger 按需读取 Swagger 定义），按原有流程自行构建 Request。
+
+### 示例
+
+假设 `design-add-new-item/03-user-onboard-applications.json` 中的 test script 为：
+```javascript
+for (const system of res.payload) {
+    if (system.systemName === targetApp) {
+        pm.collectionVariables.set('applicationId', system.systemId);
+        // ... 嵌套遍历逻辑
+    }
+}
+```
+
+则在 `createCollectionRequest` 时，`events` 参数中的 test script 必须与上述内容完全一致，不能替换为自己编写的 `find()` 版本或其他变体。
+
 ## 步骤 2：通过 mcp-swagger 按需读取 Swagger 定义
 
 **核心原则：不要一次性拉取整个 Swagger 文档。使用 mcp-swagger MCP Server 按需读取每个接口的定义。**

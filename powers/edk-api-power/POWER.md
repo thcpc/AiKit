@@ -10,18 +10,22 @@ author: "PengchengChen"
 
 ## Overview
 
-EDK API Power 是一个引导式 MCP Power，提供三个核心工作流：
+EDK API Power 是一个引导式 MCP Power，提供以下核心工作流：
 
-1. **创建 API 操作定义文件** — 从 Postman Collection JSON 自动分析目标接口的前置依赖链、数据流和用户输入参数，生成 `*.api-plan.md` 格式的 API 操作定义文件。
-2. **执行 API 操作并同步到 Postman** — 读取 `*.api-plan.md` 文件，通过 Postman MCP 在 Postman 桌面客户端中创建对应的 Collection。
-3. **生成 Postman JSON 文件（Generator）** — 读取 `*.api-plan.md` 文件，在本地生成按接口拆分的 JSON 文件，征求用户确认后再同步到 Postman。
-4. **启动加密服务** — 启动本地加密服务（`scripts/encrypt-server.js`），为 Admin Auth 等需要密码加密的接口提供 RSA 加密支持。
+1. **问卷调查（Surveyor）** — 当用户创建 Plan 时信息不足，自动生成 `questionnaire.api-form.md` 问卷文件引导用户填写必要信息。
+2. **创建 API 操作定义文件** — 从 `*.api-form.md` 问卷文件、Postman Collection JSON 或 Chrome 导出的 HAR 文件自动分析目标接口的前置依赖链、数据流和用户输入参数，生成 `*.api-plan.md` 格式的 API 操作定义文件。
+3. **执行 API 操作并同步到 Postman** — 读取 `*.api-plan.md` 文件，通过 Postman MCP 在 Postman 桌面客户端中创建对应的 Collection。
+4. **生成 Postman JSON 文件（Generator）** — 读取 `*.api-plan.md` 文件，在本地生成按接口拆分的 JSON 文件，征求用户确认后再同步到 Postman。
+5. **启动加密服务** — 启动本地加密服务（`scripts/encrypt-server.js`），为 Admin Auth 等需要密码加密的接口提供 RSA 加密支持。
+6. **API Repository 管理（Manager）** — 管理本地接口仓库 `apiRepository/`，对 Generator 生成的 JSON 文件进行新增、更新、查询、删除操作，实现接口复用。
 
 ## Available Steering Files
 
-- **planner** — 从 Postman Collection JSON 分析目标接口的前置依赖链，生成分析报告并创建 `*.api-plan.md` API 操作定义文件
+- **surveyor** — 当用户创建 Plan 时信息不足，自动生成 `questionnaire.api-form.md` 问卷文件引导用户填写，填写完毕后再由 Planner 处理
+- **planner** — 从 `*.api-form.md` 问卷文件、Postman Collection JSON 或 Chrome HAR 文件分析目标接口的前置依赖链，生成 `*.api-plan.md` API 操作定义文件
 - **sender** — 读取 `*.api-plan.md` 文件并通过 Postman MCP 创建 Collection 的工作流
 - **generator** — 读取 `*.api-plan.md` 文件，生成本地 JSON 文件（按接口拆分），征求用户确认后再同步到 Postman
+- **manager** — 管理 apiRepository 本地接口仓库，提供接口 JSON 文件的新增、更新、查询、删除操作
 - **encrypt-service** — 启动加密服务并在 API 调用中使用密码加密的工作流
 
 ## Onboarding
@@ -45,20 +49,31 @@ Power 安装后会自动配置 mcp-swagger Server。
 
 ## Common Workflows
 
-### 工作流 1：创建 API 操作定义文件
+### 工作流 1：问卷调查（Surveyor）
 
-通过分析 Postman Collection JSON 文件创建 `*.api-plan.md` 文件。
+当用户请求创建 Plan 但信息不足时，自动生成问卷文件引导用户填写。
 
 **步骤：**
-1. 提供场景名称、Swagger 地址、BaseURL
-2. 提供 Postman Collection JSON 文件（`*.postman_collection.json`）
-3. 指定目标接口 URL
-4. Agent 自动分析前置依赖链、数据流和用户输入参数
-5. 直接生成 `*.api-plan.md` 文件
+1. 检查用户是否提供了 `*.api-form.md` 文件
+2. 如果未提供或信息不足，从模板 `template/api-form.md` 生成 `questionnaire.api-form.md`
+3. 提示用户填写问卷
+4. 用户填写完毕后，告知 Agent 根据问卷创建 Plan
+
+**详细指引请读取 `surveyor` steering 文件。**
+
+### 工作流 2：创建 API 操作定义文件
+
+通过分析 `*.api-form.md` 问卷文件、Postman Collection JSON 文件或 Chrome 导出的 HAR 文件创建 `*.api-plan.md` 文件。
+
+**步骤：**
+1. 从 `*.api-form.md` 提取场景名称、Swagger 地址、BaseURL、目标接口等关键信息（或通过对话收集）
+2. 提供请求来源文件（`*.postman_collection.json` 或 `*.har`，可选）
+3. Agent 自动分析前置依赖链、数据流和用户输入参数
+4. 直接生成 `*.api-plan.md` 文件
 
 **详细指引请读取 `planner` steering 文件。**
 
-### 工作流 2：Generator（生成 JSON 文件）
+### 工作流 3：Generator（生成 JSON 文件）
 
 读取 `*.api-plan.md` 文件，在本地生成按接口拆分的 JSON 文件，用户确认后再同步到 Postman。
 
@@ -72,7 +87,7 @@ Power 安装后会自动配置 mcp-swagger Server。
 
 **详细指引请读取 `generator` steering 文件。**
 
-### 工作流 3：同步到 Postman
+### 工作流 4：同步到 Postman
 
 读取已有的 `*.api-plan.md` 文件，通过 Postman MCP 创建 Collection。
 
@@ -86,7 +101,7 @@ Power 安装后会自动配置 mcp-swagger Server。
 
 
 
-### 工作流 4：启动加密服务
+### 工作流 5：启动加密服务
 
 启动本地加密服务，为 Admin Auth 接口提供密码加密。
 
@@ -97,6 +112,30 @@ Power 安装后会自动配置 mcp-swagger Server。
 4. 将加密后的密码作为 Admin Auth 接口的 password 字段值
 
 **详细指引请读取 `encrypt-service` steering 文件。**
+
+### 工作流 6：API Repository 管理（Manager）
+
+管理本地接口仓库 `apiRepository/`，实现接口 JSON 文件的复用。
+
+**步骤：**
+1. Generator 生成 JSON 文件后，对每个接口查询 apiRepository 是否已存在
+2. 根据 Manager 操作逻辑判断执行新增（add_new）或更新（update）
+3. 接口 JSON 文件存入 `apiRepository/` 目录，索引记录在 `apiRepositoryIndex.md`
+
+**脚本：** `scripts/api_repository_manager.py`（Python 3.13）
+
+**详细指引请读取 `manager` steering 文件。**
+
+### 各工作流交互关系
+
+1. 用户 → Surveyor：信息不足时生成问卷 api-form 文件
+2. 用户 → Planner：从 api-form 或对话信息创建 api-plan 文件
+3. 用户 → Generator：根据 api-plan 生成 Postman Collection JSON
+4. Generator → Manager：查询已有接口作为参考
+5. Manager → Generator：返回已有接口内容
+6. Generator → 用户：生成 JSON 文件
+7. 用户 → Manager：提交新生成的 JSON 文件到 apiRepository
+8. 用户 → Sender：将 Collection JSON 同步到 Postman
 
 ## 密码加密规则
 
@@ -163,6 +202,22 @@ Power 安装后会自动配置 mcp-swagger Server。
 | {field} | 🔸 | "{example_value}" |
 ```
 
+当接口参数中包含**复合参数**（数组类型，部分字段自动获取、部分需要用户填写）时，在主表格之后使用 `#### 复杂参数` 子章节：
+
+```markdown
+#### 复杂参数
+
+##### {参数名}
+
+> 数据来源：{自动获取字段说明}，{用户填写字段说明}。
+
+| {用户可见字段} | {用户填写字段1} | {用户填写字段2} |
+| ------------- | -------------- | -------------- |
+| {值1} | 🔸 | 🔸 |
+| {值2} | 🔸 | 🔸 |
+|  |  |  |
+```
+
 #### 4. Instruction
 
 描述执行指令，说明如何处理 API 调用和数据传递。
@@ -227,7 +282,7 @@ Power 安装后会自动配置 mcp-swagger Server。
 
 #### 7. Reference Collection
 
-提供一个从浏览器 DevTools 导出的 Postman Collection JSON 文件作为参考。这是最可靠的参考来源，包含了每个接口的真实 method、headers、body 和 URL。
+提供一个从浏览器 DevTools 导出的 Postman Collection JSON 文件或 HAR 文件作为参考。这是最可靠的参考来源，包含了每个接口的真实 method、headers、body 和 URL。
 
 ```markdown
 ## Reference
@@ -235,8 +290,17 @@ Power 安装后会自动配置 mcp-swagger Server。
 - #[[file:temp.postman_collection.json]]
 ```
 
+或
+
+```markdown
+## Reference
+
+- #[[file:temp.har]]
+```
+
 使用方式：
 - 将浏览器中正确的操作流程通过 DevTools Network 面板导出为 HAR 或 Postman Collection 格式
+- HAR 文件额外包含真实的响应数据（response body），可用于验证 Swagger Response 结构
 - 文件中包含真实的请求参数、headers、body，可作为创建 Collection 时的权威参考
 - 当 Swagger 定义与参考文件冲突时，以参考文件为准（因为它是实际可工作的请求）
 
