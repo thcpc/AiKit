@@ -8,7 +8,7 @@
 
 ## 加密服务说明
 
-- 脚本路径：`scripts/encrypt-server.js`（位于 Power 目录下）
+- 脚本路径：`~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/encrypt-server.js`
 - 监听地址：`http://localhost:9876`
 - 接口：`POST /encrypt`
 - 请求体：`{ "password": "明文密码" }`
@@ -20,8 +20,7 @@
 使用 `controlPwshProcess` 工具以后台进程方式启动加密服务：
 
 ```
-command: node scripts/encrypt-server.js
-cwd: {power目录路径}
+command: node ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/encrypt-server.js
 ```
 
 启动后确认输出包含 `Encrypt server running on http://localhost:9876`。
@@ -98,10 +97,10 @@ pm.sendRequest({
 
 ### 加密服务启动失败
 
-**问题：** `node scripts/encrypt-server.js` 报错
+**问题：** `node ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/encrypt-server.js` 报错
 **解决方案：**
 1. 确认 Node.js 已安装
-2. 确认脚本路径正确
+2. 确认脚本路径正确（`~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/encrypt-server.js`）
 3. 确认端口 9876 未被占用：`netstat -ano | findstr 9876`
 
 ### 加密接口返回 500

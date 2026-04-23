@@ -34,7 +34,7 @@ apiRepository/
 
 ## 脚本使用方式
 
-脚本路径：`powers/edk-api-power/scripts/api_repository_manager.py`
+脚本路径：`~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py`
 
 ### 初始化 apiRepository
 
@@ -44,19 +44,19 @@ apiRepository/
 
 ```bash
 # 新增
-python powers/edk-api-power/scripts/api_repository_manager.py add_new --api "admin/auth" --collection "designer-add-crf-item" --source "designer-add-crf-item/01-auth.json"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py add_new --api "admin/auth" --collection "designer-add-crf-item" --source "designer-add-crf-item/01-auth.json"
 
 # 更新（追加集合）
-python powers/edk-api-power/scripts/api_repository_manager.py update --api "admin/auth" --collection "designer-new-crf-item"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py update --api "admin/auth" --collection "designer-new-crf-item"
 
 # 更新（覆盖文件）
-python powers/edk-api-power/scripts/api_repository_manager.py update --api "admin/auth" --collection "designer-add-crf-item" --source "designer-add-crf-item/01-auth-v2.json"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py update --api "admin/auth" --collection "designer-add-crf-item" --source "designer-add-crf-item/01-auth-v2.json"
 
 # 查询
-python powers/edk-api-power/scripts/api_repository_manager.py query --api "admin/auth"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py query --api "admin/auth"
 
 # 删除
-python powers/edk-api-power/scripts/api_repository_manager.py remove --api "admin/auth" --collection "designer-add-crf-item"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py remove --api "admin/auth" --collection "designer-add-crf-item"
 ```
 
 ---
@@ -101,7 +101,7 @@ python powers/edk-api-power/scripts/api_repository_manager.py remove --api "admi
 Generator 在生成 JSON 文件前，先向 Manager 查询已有接口：
 
 ```bash
-python powers/edk-api-power/scripts/api_repository_manager.py query --api "admin/auth"
+python ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py query --api "admin/auth"
 ```
 
 返回结果供 Generator 参考已有的 Collection JSON 来生成新的接口文件。

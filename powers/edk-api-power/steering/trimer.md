@@ -9,7 +9,7 @@
 ## 使用方式
 
 ```bash
-py powers/edk-api-power/scripts/har_trim.py <input.har>
+py ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/har_trim.py <input.har>
 ```
 
 > **Python 命令兼容性：** 优先使用 `py`（Windows Launcher），如果失败则依次尝试 `python3`、`python`。
@@ -40,7 +40,7 @@ py powers/edk-api-power/scripts/har_trim.py <input.har>
 ## 示例
 
 ```bash
-py powers/edk-api-power/scripts/har_trim.py "edc submit.har"
+py ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/har_trim.py "edc submit.har"
 # 成功: {"status":"ok","input":"edc submit.har","output":"edc submit.trim.har","inputSize":"1234.5KB","outputSize":"567.8KB","reduction":"54.0%","stacksRemoved":15,"verification":"passed"}
 # 异常: {"status":"warning",...,"verification":"failed","diffs":[".log.entries[0].response: value mismatch"]}
 ```

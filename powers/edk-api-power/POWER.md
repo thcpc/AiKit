@@ -8,6 +8,14 @@ author: "PengchengChen"
 
 # EDK API Power
 
+## Power Paths
+
+- Power Root: `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power`
+- Template: `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/template`
+- Scripts: `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts`
+
+> 所有 steering 文件中引用 template 或 scripts 时，请使用上述完整路径。
+
 ## Overview
 
 EDK API Power 是一个引导式 MCP Power，提供以下核心工作流：
@@ -110,7 +118,7 @@ Power 安装后会自动配置 mcp-swagger Server。
 启动本地加密服务，为 Admin Auth 接口提供密码加密。
 
 **步骤：**
-1. 使用 `node scripts/encrypt-server.js` 启动加密服务（监听 `http://localhost:9876`）
+1. 使用 `node ~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/encrypt-server.js` 启动加密服务（监听 `http://localhost:9876`）
 2. 在调用 Admin Auth 接口前，先 POST `http://localhost:9876/encrypt` 发送 `{ "password": "明文密码" }`
 3. 获取返回的 `{ "encrypted": "加密后的密码" }`
 4. 将加密后的密码作为 Admin Auth 接口的 password 字段值
@@ -126,7 +134,7 @@ Power 安装后会自动配置 mcp-swagger Server。
 2. 根据 Manager 操作逻辑判断执行新增（add_new）或更新（update）
 3. 接口 JSON 文件存入 `apiRepository/` 目录，索引记录在 `apiRepositoryIndex.md`
 
-**脚本：** `scripts/api_repository_manager.py`（Python 3.13）
+**脚本：** `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/scripts/api_repository_manager.py`（Python 3.13）
 
 **详细指引请读取 `manager` steering 文件。**
 

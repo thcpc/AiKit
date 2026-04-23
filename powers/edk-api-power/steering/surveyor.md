@@ -39,7 +39,7 @@ Planner 启动所需的**最低信息**：
 
 ## 步骤 2：生成问卷文件
 
-1. 读取模板文件 `powers/edk-api-power/template/api-form.md`
+1. 读取模板文件 `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/template/api-form.md`
 2. 在 workspace 根目录下创建 `questionnaire.api-form.md`，内容复制自模板
 3. 如果用户已提供了部分信息（如场景名称或 Swagger 地址），将已知信息预填到问卷中
 
@@ -82,6 +82,6 @@ Planner 启动所需的**最低信息**：
 
 1. **不要跳过问卷**：如果信息不足，必须先生成问卷，不要通过多轮对话逐一询问
 2. **预填已知信息**：如果用户已提供了部分信息，在问卷中预填，减少用户工作量
-3. **模板路径固定**：模板文件始终位于 `powers/edk-api-power/template/api-form.md`
+3. **模板路径固定**：模板文件始终位于 `~/.kiro/powers/repos/edk-api-power/powers/edk-api-power/template/api-form.md`
 4. **问卷文件位置固定**：生成的问卷文件始终位于 workspace 根目录
 5. **文件命名**：默认命名为 `questionnaire.api-form.md`，如果用户指定了场景名称，可命名为 `{场景名称}.api-form.md`
