@@ -1,4 +1,4 @@
----
+﻿---
 name: red-llm-wiki
 description: >
   AI 驱动的个人知识库管理。消化素材（文本、PDF、链接）为互相链接的 wiki 页面，
@@ -25,7 +25,7 @@ metadata:
 | 给素材（文本、文件、链接、路径） | **ingest** | 用户提供了新内容要整理 |
 | 给文件夹或说"把这些都整理一下" | **batch-ingest** | 批量素材 |
 | 提问知识库内容（"告诉我XX"、"XX是什么"、"XX相关的知识"） | **query** | 用户在问已有知识 |
-| "给我讲讲XX"、"深度分析XX"、"对比X和Y" | **digest** | 跨素材深度综合 |
+| "给我讲讲XX"、"深度分析XX"、"对比X和Y"、"综述XX"、"全面总结XX" | **digest** | 跨素材深度综合 |
 | "检查知识库"、"lint" | **lint** | 健康检查 |
 | "初始化知识库" | **init** | 初始化 |
 
@@ -40,49 +40,25 @@ metadata:
 
 ## 目录结构
 
-```
-$WIKI_ROOT/
-├── raw/                    # 原始素材
-│   ├── articles/           # 网页文章
-│   ├── tweets/             # X/Twitter
-│   ├── wechat/             # 微信公众号
-│   ├── xiaohongshu/        # 小红书
-│   ├── zhihu/              # 知乎
-│   ├── pdfs/               # PDF
-│   ├── notes/              # 笔记
-│   └── assets/             # 图片等附件
-├── wiki/                   # 知识库
-│   └── {topicName}/        # 文件名来自 topics.md
-│         ├── overview.md
-│         ├── index.md
-│         ├── entities/
-│         ├── concepts/
-│         ├── comparisons/
-│         ├── summaries/
-│         └── synthesis/
-├── queries/                # 查询结果
-├── log.md                  # 操作日志
-├── topics.md               # 研究方向
-├── .wiki-cache.json        # 缓存（未来规划）
-└── .wiki-schema.md         # 配置规范
-```
+⛔ **目录结构以 `references/wiki-structure.md` 为唯一标准**，禁止增减层级。
+详细结构、核心规则、内容形态分类、WIKI_ROOT 确认规则见 [references/wiki-structure.md](references/wiki-structure.md)。
 
 ## 素材类型路由
 
 | 来源 | raw 目录 | 提取方式 |
 |------|----------|----------|
-| 网页文章 | `raw/articles/` | baoyu-url-to-markdown skill 未来规划|
-| X/Twitter | `raw/tweets/` | baoyu-url-to-markdown skill 未来规划|
-| 微信公众号 | `raw/wechat/` | wechat-article-to-markdown 未来规划|
-| YouTube | `raw/articles/` | youtube-transcript skill 未来规划|
+| 网页文章 | `raw/articles/` | baoyu-url-to-markdown skill（未来规划）|
+| X/Twitter | `raw/tweets/` | baoyu-url-to-markdown skill（未来规划）|
+| 微信公众号 | `raw/wechat/` | wechat-article-to-markdown（未来规划）|
+| YouTube | `raw/articles/` | youtube-transcript skill（未来规划）|
 | B站视频 | `raw/articles/` | 未来规划 |
-| 小红书 | `raw/xiaohongshu/` | 用户手动粘贴 未来规划|
+| 小红书 | `raw/xiaohongshu/` | 用户手动粘贴（未来规划）|
 | 知乎 | `raw/zhihu/` | 用户手动粘贴 或 baoyu-url-to-markdown |
-| PDF | `raw/pdfs/` | `py scripts/read_pdf.py <path>` 提取文本 |
-| Xmind | `raw/xmind/` | `mcp:@41px/mcp-xmind` |
+| PDF | `raw/pdfs/` | `python3 scripts/read_pdf.py <path>`（失败用 py）|
+| XMind | `raw/xmind/` | `mcp:@41px/mcp-xmind` |
 | Markdown/文本/HTML | `raw/notes/` | 直接读取 |
 | 纯文本粘贴 | `raw/notes/` | 直接使用 |
-| 外部文件路径 | `raw/` 对应子目录 | `py scripts/import_external.py` 复制到工作区后读取 |
+| 外部文件路径 | `raw/` 对应子目录 | `python3 scripts/import_external.py`（失败用 py）|
 
 ## 工作流
 
@@ -90,14 +66,17 @@ $WIKI_ROOT/
 
 **触发**：用户说"初始化知识库"
 
-1. 检查 `$WIKI_ROOT/.wiki-schema.md` 是否存在，若存在则停止
-2. 询问用户知识库路径和主要语言（ZH/EN）
-3. 运行 `py scripts/init.py <wiki_root>`
-4. 根据 `assets/wiki-schema-template.md` 生成 `.wiki-schema.md`
-5. **扫描已有内容**：检查 `$WIKI_ROOT` 下是否存在非知识库标准结构的文件夹或文件（即不属于 `raw/`、`wiki/`、`queries/` 的内容）。若发现：
-   a. 列出这些文件夹/文件及其大致内容
-   b. 询问用户："发现以下已有内容，是否要将它们整理到知识库中？"
-   c. 用户确认后，按 batch-ingest 流程处理
+⛔ **WIKI_ROOT 必须由用户明确指定**，规则详见 [references/wiki-structure.md](references/wiki-structure.md) 的"WIKI_ROOT 的确认规则"。
+⛔ **目录结构以 `references/wiki-structure.md` 为唯一标准**，禁止增减层级。
+
+流程：
+1. 与用户确认 WIKI_ROOT 路径
+2. 检查 `$WIKI_ROOT/.wiki-schema.md` 是否存在，若存在则停止
+3. 询问用户主要语言（ZH/EN）
+4. 先尝试 `python3 scripts/init.py <wiki_root>`，失败则改用 `py scripts/init.py <wiki_root>`
+5. 根据 `assets/wiki-schema-template.md` 生成 `.wiki-schema.md`
+6. ⛔ **结构自检**：列出 `$WIKI_ROOT` 实际生成的目录和文件，逐项对照 `references/wiki-structure.md`，确认无多余层级、无遗漏目录
+7. 扫描 `$WIKI_ROOT` 是否有非标准结构的文件/文件夹，若有则询问用户是否整理入库
 
 ### ingest
 
@@ -105,146 +84,37 @@ $WIKI_ROOT/
 
 ⛔ **前置要求**：操作前先读取 `$WIKI_ROOT/.wiki-schema.md`，输出语言根据其语言字段。
 
-0. **外部文件预处理**（仅当用户给出的路径在工作区外时）：
-   运行 `py scripts/import_external.py <wiki_root> <source_path> [--subdir <类型>]`
-   脚本会自动完成：复制文件到 raw/、扫描图片引用、搜索并复制图片到 raw/assets/。
-   根据脚本输出的 JSON 报告，若有 `images_missing` 则在后续摘要页中标注 `[图片缺失: 文件名]`。
+1. **素材迁移**（⛔ 必须在创建任何 wiki 页面之前完成）
+   详细规则见 [references/ingest-details.md](references/ingest-details.md) 的"素材类型判断与迁移"章节。
+   - 工作区外 → `python3 scripts/import_external.py`（⛔ 只复制，不删除源文件）
+   - 工作区内（不在 raw/）→ 移动（⛔ 必须删除源文件）
+   - 纯文本粘贴 → 保存为 `raw/notes/{日期}-{短标题}.md`
 
-1. **判断素材类型，提取内容**
-   - ⛔ PDF 文件必须使用 `py scripts/read_pdf.py <pdf_path>` 脚本读取，不得内联 Python 命令。
-   - ⛔ 大型文档（PDF > 20 页，或文本 > 10000 字）必须先完整阅读再总结：
-     a. 分批读完全部内容（PDF 先 `--outline-only` 获取大纲，再分段 `--pages` 读全文）
-     b. 整理出完整章节结构大纲
-     c. 基于完整阅读提炼观点
-     d. ⛔ 禁止只读前几页就开始创建页面。"觉得够了"不是停止阅读的理由。
+2. **提取内容**（按素材载体类型）：
+   - PDF → `python3 scripts/read_pdf.py <path>`（失败用 `py`，⛔ 必须用脚本，详细规则见 ingest-details.md）
+   - Markdown/文本/HTML → 直接读取
+   - 纯文本粘贴 → 直接使用
 
-1.5. **确定文档类型**（⛔ 门控步骤，必须等待用户确认，不可自主决定）：
-   向用户展示选项：
-   - A. **规范类文档**（标准规范、API 文档、技术手册、协议定义——有编号体系、有 Required/Optional 约束、有逐项定义）
-   - B. **观点类文档**（文章、博客、讨论、笔记、报道——表达观点、经验、分析）
-   - C. **培训类文档**（教程、课程、操作指南、培训材料——教授如何做某事）
-   ⛔ DO NOT proceed until user replies. 等待用户回复后才能继续下一步。
+3. **确定文档类型**（⛔ 门控步骤，必须等待用户确认）：
+   - A. 规范类 / B. 观点类 / C. 培训类
+   - 详细处理规则见 [references/doc-types.md](references/doc-types.md)
 
-2. **确定归属 Topic**（⛔ 门控步骤，必须等待用户确认，不可自主决定）：
-   a. 读取 topics.md
-   b. 向用户展示选项：
-      - 1. AI 推荐：`{AI根据素材内容推荐的Topic名}`
-      - 2. 自定义（用户直接输入 Topic 名）
-      - 3-N. 已有 Topic 列表（从 topics.md 中读取）
-   c. ⛔ DO NOT proceed until user replies. 等待用户回复后才能继续下一步。
+4. **确定归属 Topic**（⛔ 门控步骤）
+   详细流程（AI 推荐、选项展示、Topic 创建）见 [references/ingest-details.md](references/ingest-details.md) 的"Topic 生成流程"。
 
-3. **创建 Topic 结构**（仅当 Topic 不存在时）：
-   读取 `assets/overview-template.md` 创建 overview.md，读取 `assets/index-template.md` 创建 index.md，创建子目录（entities/concepts/comparisons/summaries/synthesis），将新 Topic 添加到 topics.md。
+5. **创建摘要页**
+   详细约束（模板选择、溯源格式、引用规范）见 [references/ingest-details.md](references/ingest-details.md) 的"摘要页创建规则"。
 
-4. **保存原始素材到 raw/**（不可省略，必须在创建摘要页之前完成）：
-   a. 若素材来自工作区外：已由步骤 0 的 import_external.py 完成
-   b. 若素材来自工作区内其他位置（如 Clippings/）：将文件**移动**到 `raw/` 对应子目录（⛔ 移动 = 复制到目标 + 删除源文件，不可只复制不删除）
-   c. 若素材为用户纯文本粘贴：将内容保存为 `raw/notes/{日期}-{短标题}.md`
-   d. 若素材包含图片引用：将图片文件**移动**到 `raw/assets/`（⛔ 同上，必须删除源位置的图片文件）
-   e. ⛔ 确保溯源来源链接指向的 raw/ 文件确实存在，否则立即创建
-   f. ⛔ 源文件清理检查：步骤 4 完成后，必须验证原始位置的文件已被删除；若源目录变为空目录，一并删除该空目录
+6. **分级处理 + 创建知识页**：
+   按文档类型和内容拆分原则处理，详见 [references/doc-types.md](references/doc-types.md)。
+   ⛔ 必须输出"内容拆分计划"给用户确认。
+   ⛔ 拆分/合并判断必须询问用户，等待确认后才继续。
 
-5. **创建摘要页**：
-   ⛔ 必须先读取对应模板，严格按模板章节结构输出，不得自行简化、合并或替换章节名称。
-   根据步骤 1.5 确定的文档类型选择模板：
-   - **规范类**：读取 `assets/summary-spec-template.md`
-   - **观点类**：读取 `assets/summary-template.md`
-   - **培训类**：读取 `assets/summary-training-template.md`
-   填充内容到 `wiki/{Topic}/summaries/`。
-   ⛔ 规范类：核心观点必须按章节逐一覆盖；"文档结构"章节每个主要章节后必须有 `[[概念页链接]]`。
-   ⛔ 培训类："知识模块"章节每个模块后必须有 `[[概念页链接]]`。
-   ⛔ 溯源来源格式：`[[raw/{subdir}/{文件名}|显示名]]`（Obsidian wiki link），禁止纯文本或相对路径链接。
-   ⛔ 每个关键事实后面标注来源：`([[raw/{subdir}/{文件名}|源文, L42-45]])`
-   ⛔ 数字和结论必须原文引用**
-      不要用 AI 的话重述数字。直接引用原文。
-       差：该公司营收约 10 亿
-       好：该公司营收"10.3 亿元"(raw/report.md, L128)
-
-
-6. **分级处理 + 创建概念页**：
-   
-   **按文档类型区分处理策略**：
-   
-   **A. 观点类文档**：
-   - **完整处理**（素材 > 1000 字）：
-     1. 提取 3-5 个关键概念
-     2. 检查是否需要创建新的实体页（读取 `assets/entity-template.md`）
-     3. 检查是否需要创建或更新概念页（读取 `assets/concept-template.md`），围绕"思想/方法论/模式"创建
-     4. 更新 `wiki/{Topic}/overview.md`（如果知识库全貌有变化）
-   - **简化处理**（素材 < 1000 字）：
-     1. 提取 1-3 个关键概念
-     2. 如果关键概念已有页面，追加信息；否则标记 `[待创建]`
-     3. 跳过概念页和 overview 更新
-   
-   **B. 规范类文档**（⛔ 不可用观点类的"提炼几个要点"方式处理）：
-   - 规范的每个章节都是独立的知识单元，必须为每个主要技术模块创建独立概念页
-   - 概念页中应包含该元素/机制的完整属性表、业务规则、使用约束
-   - 不适用简化处理（规范类文档通常都 > 1000 字）
-   - 处理步骤：
-     1. 按文档大纲，为每个主要章节/元素确定需要创建的概念页列表
-     2. 逐一创建概念页（读取 `assets/concept-template.md`）
-     3. 检查是否需要创建实体页（读取 `assets/entity-template.md`）
-     4. 更新 `wiki/{Topic}/overview.md`
-   
-   **C. 培训类文档**：
-   - **完整处理**（素材 > 1000 字）：
-     1. 按知识模块提取关键概念
-     2. 概念页围绕以下类型创建：
-        - **操作流程页**：完整的步骤序列
-        - **最佳实践页**：从教程中提炼的推荐做法
-        - **常见问题页**：教程中提到的坑和解决方案
-        - **工具/命令页**：关键工具的用法速查
-     3. 可适度压缩相似步骤，但不可丢失关键操作细节
-     4. 更新 `wiki/{Topic}/overview.md`
-   - **简化处理**（素材 < 1000 字）：
-     1. 提取 1-3 个关键操作/知识点
-     2. 如果已有页面，追加信息；否则标记 `[待创建]`
-     3. 跳过概念页和 overview 更新
-   
-   ⛔ **所有文档类型通用约束**：
-   - 必须先读取 `assets/concept-template.md`，严格按模板章节结构输出
-   - 底部关联章节必须使用"相关实体 → 关联概念 → 溯源来源"，禁止替换为"相关页面"
-   - 溯源来源格式：`[[摘要页名]]`（禁止纯文本或相对路径）
-   - ⛔ **合并判断必须询问用户**：遇到多章节合并、内容拆分、与已有页面重叠时，必须暂停展示方案，等待用户决定后才继续。格式：
-     ```
-     ⚠️ 合并判断：
-     - 方案 A：...
-     - 方案 B：...
-     请选择。
-     ```
-
-7. **更新 index.md、log.md、首页.canvas**，展示结果：
-   ⛔ 每次操作后必须更新 `log.md`（格式参考 `assets/log-entry-template.md`）。
-   ⛔ 每次操作后必须重新生成 `$WIKI_ROOT/首页.canvas`，规则如下：
-   
-   **首页.canvas 生成规则**：
-   - **数据来源**：`topics.md`
-   - **布局风格**：极简理性逻辑架构风，纯白干净基底，中心放置核心总纲节点，向外发散多层分支架构，用纤细流畅连线串联各知识板块，层级分明条理清晰，留白舒适，专业知识库门户视觉。
-   - **结构规则**：
-     - 中心节点：知识库标题 + Topic 总数 + 更新日期
-     - 第二层：按领域分类的域节点（如"临床系统"、"开发技术"、"研究兴趣"），使用低饱和莫兰迪配色区分
-     - 第三层：各 Topic 叶节点，每个节点使用 `text` 类型（不用 `file` 类型），内容为 `### Topic名\n\n关键词描述\n\n[[wiki/{Topic名}/overview]]`
-     - 底部：`topics.md` 和 `log.md` 的快捷导航节点
-     - 所有层级之间用 edges 连线串联（中心→域→Topic）
-   - **技术约束**：
-     - 节点用 `text` 类型显示 Topic 名称，不用 `file` 类型（避免只显示文件名"overview"）
-     - 通过 `[[wiki/xxx/overview]]` 链接保持可点击跳转
-     - edges 无装饰，纤细连线即可
-     - color 使用 Obsidian canvas 内置色号（"0"-"6"），低饱和沉稳
-   
-   展示内容包括：
-   - 已消化：（素材标题）
-   - 新增页面列表
-   - 更新页面列表
-   - 发现关联（与已有素材的联系）
-   - 融会建议（仅当发现新的交叉关系时提示）
+7. **更新 index.md、log.md、首页.canvas**，展示结果。
+   详细规则（canvas 生成、展示格式）见 [references/ingest-details.md](references/ingest-details.md) 的"首页.canvas 生成规则"和"展示结果格式"。
 
 8. **执行 lint**（⛔ 不可省略）：
-   对本次更新的 topic 运行健康检查：
-   - 交叉引用完整性、孤立页面、index 一致性
-   - 溯源来源格式（summaries 用 `[[raw/...|显示名]]`，concepts/entities 用 `[[摘要页名]]`）
-   - 规范类：文档结构章节每个条目必须有链接
-   - 培训类：知识模块每个模块必须有链接
+   对本次更新的 topic 运行健康检查，详见 [references/lint-checklist.md](references/lint-checklist.md)。
    发现问题立即修复。
 
 ### batch-ingest
@@ -274,31 +144,38 @@ $WIKI_ROOT/
 
 ### digest
 
-**触发**："给我讲讲 XX"、"深度分析 XX"、"对比一下 X 和 Y"
+**触发**：“给我讲讲 XX”、“深度分析 XX”、“对比一下 X 和 Y”
 
 区别于 query：query 是快速问答生成到 queries/；digest 是跨素材深度综合，生成到 synthesis/ 或 comparisons/。
 
 ⛔ **核心原则**：
 - 知识必须来源于知识库中已有的页面，不可引用知识库外的信息
 - 不可编造，不可臆断，不可补充知识库中没有的内容
-- 存疑、不确定、无法从知识库中明确得出的内容，必须放在"待酌"章节
-- 读取 `index.md` 了解知识库全貌
-1.搜索相关页面：
+- 存疑、不确定、无法从知识库中明确得出的内容，必须放在“待酌”章节
 
-别名展开：同 query 工作流，先读取 .wiki-schema.md 中的"别名词表"展开同义词（不跨组传递，自动去重）
-用 Grep 在 wiki/ 下搜索所有关键词（原始 + 别名展开），同一别名组命中同一页面只计一次
-列出将要综合的页面（让用户了解报告覆盖范围）
-2.深度阅读所有相关页面 + 选择输出格式：
+流程：
+1. **搜索相关页面**：
+   - 读取 `.wiki-schema.md` 中的别名词表展开同义词（不跨组传递，自动去重）
+   - 读取 topics.md，找出覆盖该主题的所有相关 topic，列出后让用户确认（可跨 topic）
+   - 用 Grep 在 wiki/ 下搜索所有关键词（原始 + 别名展开），同一别名组命中同一页面只计一次
+   - 列出将要综合的页面（让用户了解报告覆盖范围）
 
-读取找到的所有相关 wiki 页面（sources/、entities/、topics/）
-单页长度上限：如果某页超过 3000 字，优先读取 frontmatter + 核心观点章节 + 与主题直接相关的段落，跳过"原文精彩摘录"等冗长引用部分
-归纳每个页面的核心观点和来源信息
-根据触发关键词决定输出格式：
-用户说"对比"/"比较"类 → 使用对比表格式（见下方模板 B）
-用户说"时间线"/"按时间"类 → 使用时间线格式（见下方模板 C）
-其他默认 → 使用深度报告格式（见下方模板 A）
-- **综合分析**：读取 `assets/synthesis-template.md`，严格按模板章节结构输出（含"待酌"章节） → `wiki/{topic}/synthesis/{日期}-{主题}.md`
-- **对比分析**：读取 `assets/comparison-template.md`，严格按模板章节结构输出 → `wiki/{topic}/comparisons/{日期}-{对象1}-vs-{对象2}.md`
+2. **深度阅读所有相关页面**：
+   - 读取找到的所有相关 wiki 页面（concepts/、entities/、procedures/、rules/、summaries/）
+   - 单页长度上限：如果某页超过 3000 字，优先读取 frontmatter + 核心观点章节 + 与主题直接相关的段落，跳过“原文精彩摘录”等冗长引用部分
+   - 归纳每个页面的核心观点和来源信息
+
+3. **判断意图，生成对应输出**：
+   - **意图1**（对比分析）：“对比” / “比较” / “有什么区别”
+     → 读取 `assets/comparison-template.md`，严格按模板章节结构输出
+     → 保存到 `wiki/{topic}/comparisons/{日期}-{对象1}-vs-{对象2}.md`
+     → 若对比对象来自不同 topic，在对象2的 topic 的 index.md 中添加交叉引用
+   - **意图2**（综合分析）：“给我讲讲” / “深度分析” / “综述” / “全面总结”
+     → 读取 `assets/synthesis-template.md`，严格按模板章节结构输出（含“待酌”章节）
+     → 保存到 `wiki/{topic}/synthesis/{日期}-{主题}.md`
+   - **其他意图**：AI 根据用户表述判断最合适的输出格式（对比或综合），向用户说明选择理由后执行
+
+4. 更新 log.md
 
 ### lint
 
@@ -306,96 +183,43 @@ $WIKI_ROOT/
 - 用户说"检查知识库"
 - 每次 ingest / batch-ingest 完成后自动执行
 
-⛔ **以下所有检查项都很重要，不可遗漏任何一项。每次 lint 必须逐项执行并报告结果。**
+⛔ 所有检查项都必须逐项执行并报告结果，不可遗漏。
 
-#### 脚本检查
+1. 先尝试 `python3 scripts/lint_runner.py <wiki_root> [topic]`，失败则改用 `py scripts/lint_runner.py <wiki_root> [topic]`
+2. AI 补充检查（详见 [references/lint-checklist.md](references/lint-checklist.md)）
+3. 输出中文报告（✅/❌/⚠️ 逐项），询问是否自动修复
 
-```
-py scripts/lint_runner.py <wiki_root> [topic]
-```
+## 规则
 
-⛔ 检查项（全部必须执行）：
-- [ ] **孤立页面**：entities/ 下没有被其他页面引用的实体
-- [ ] **断链**：`[[X]]` 链接指向的 X.md 不存在
-- [ ] **index 一致性**：index.md 里有记录但文件缺失的条目
-
-#### AI 补充检查
-
-⛔ 检查项（全部必须执行，不可跳过任何一项）：
-- [ ] **矛盾信息**：阅读相关页面，检查是否有互相矛盾的说法
-- [ ] **交叉引用缺失**：检查相关主题的页面之间是否应该互相链接但没链
-- [ ] **置信度报告**：统计 EXTRACTED / INFERRED / AMBIGUOUS / UNVERIFIED
-- [ ] **溯源来源格式检查**：
-  - summaries 页：必须是 `[[raw/{subdir}/{文件名}|显示名]]` 格式（Obsidian wiki link），⛔ 发现纯文本或相对路径 `[](../...)` 则报错
-  - concepts / entities 页：必须是 `[[摘要页名]]` 格式，⛔ 发现纯文本或相对路径则报错
-- [ ] **规范类文档结构完整性检查**（⛔ 仅当摘要页 doc_type 为"规范类"时执行，但不可遗漏）：
-  - 检查摘要页的"文档结构"章节中，每个主要章节是否都有 `[[概念页名]]` 链接
-  - ⛔ 发现无链接的章节条目则报错，提示需要创建对应概念页或补充链接
-  - 检查链接指向的概念页文件是否实际存在
-- [ ] **培训类文档模块完整性检查**（⛔ 仅当摘要页 doc_type 为"培训类"时执行，但不可遗漏）：
-  - 检查摘要页的"知识模块"章节中，每个模块是否都有 `[[概念页名]]` 链接
-  - 检查"学习目标"中的每项能力是否有对应的概念页覆盖
-  - 检查链接指向的概念页文件是否实际存在
-- [ ] **源文件清理检查**：确认 raw/ 以外不存在应已被移动的源文件残留
-- [ ] **过时检测**：对比每个摘要页面的 updated 的日期和对应raw素材的修改时间,如果raw素材更新了但wiki没更新，标记为“可能过时”
-
-#### 输出报告
-
-⛔ 报告必须逐项列出每个检查项的结果（✅ 通过 / ❌ 失败 / ⚠️ 警告），不可笼统概括。
-
-输出中文报告，询问是否自动修复。报告包含：
-- 每个检查项的逐项结果
-- 孤立页面及建议链接
-- 断链及建议创建
-- 矛盾信息及来源
-- 缺失索引条目
-- 溯源来源格式错误清单
-- 文档结构/知识模块链接缺失清单
-- 置信度统计
-
-## 规则索引
-
-> 以下规则已内联到对应的工作流步骤中。本章节作为完整索引供查阅，不作为执行时的唯一参考。
-
-1. 操作前先读取 `$WIKI_ROOT/.wiki-schema.md`（→ ingest 前置要求）
-2. 输出语言根据 `.wiki-schema.md` 的语言字段（→ ingest 前置要求）
-3. 页面间使用 `[[页面名]]` 语法互相链接（→ 通用）
-4. 每次操作后更新 `log.md`（→ ingest 步骤 7）
-5. 创建新页面时必须先读取对应模板，严格按模板章节结构输出（→ ingest 步骤 5、6）
-6. 素材 >1000 字完整处理，<1000 字简化处理（→ ingest 步骤 6）
-7. 底部关联章节以对应模板为准，禁止统一替换（→ ingest 步骤 6）
-8. 图片必须移动到 `raw/assets/`，不可留在其他位置（→ ingest 步骤 4）
-9. ingest/batch-ingest 完成后必须执行 lint（→ ingest 步骤 8）
-10. 溯源来源格式按页面类型区分（→ ingest 步骤 5、6）
-11. Topic 确认是门控步骤（→ ingest 步骤 2）
-12. 源文件必须清理，禁止只复制不删除（→ ingest 步骤 4）
-13. PDF 读取使用 `py scripts/read_pdf.py` 脚本（→ ingest 步骤 1）
-14. 大型文档必须完整阅读后再总结（→ ingest 步骤 1）
-15. 区分规范类/观点类/培训类的处理策略（→ ingest 步骤 1.5、5、6）
-16. 合并判断必须询问用户（→ ingest 步骤 6）
+1. 操作前先读取 `$WIKI_ROOT/.wiki-schema.md`
+2. 输出语言根据 `.wiki-schema.md` 的语言字段
+3. 页面间使用 `[[页面名]]` 语法互相链接（Obsidian 兼容）
+4. 每次操作后更新 `log.md`（格式参考 `assets/log-entry-template.md`）
+5. 创建新页面时使用 `assets/` 下对应模板
+6. 溯源来源格式：`[[raw/{subdir}/{文件名}|显示名]]`，禁止纯文本或相对路径
+7. 每个新建的 wiki 页面（concept/entity/procedure/rule/summary）frontmatter 必须包含 `confidence` 字段（EXTRACTED / INFERRED / AMBIGUOUS / UNVERIFIED）
+8. 所有脚本命令先尝试 `python3`，失败则改用 `py`
 
 ## 页面命名规范
 
 - 实体页：`wiki/{topicName}/entities/{名称}.md`
 - 概念页：`wiki/{topicName}/concepts/{概念名}.md`
+- 操作流程页：`wiki/{topicName}/procedures/{流程名}.md`
+- 业务规则页：`wiki/{topicName}/rules/{规则名}.md`
 - 素材摘要：`wiki/{topicName}/summaries/{日期}-{短标题}.md`
 - 对比分析：`wiki/{topicName}/comparisons/{对比主题}.md`
 - 综合分析：`wiki/{topicName}/synthesis/{分析主题}.md`
 - 主题总览：`wiki/{topicName}/overview.md`
 - 主题索引：`wiki/{topicName}/index.md`
 
-## 交叉引用规范
-
-- 页面间使用 `[[页面名]]` 语法（Obsidian 兼容的双向链接）
-- 素材引用格式：`[来源: 素材标题](../summaries/xxx.md)`
-- 每个页面底部维护对应模板定义的关联章节
-
 ## 底部关联章节（按页面类型区分）
 
 不同类型的页面使用不同的底部关联章节，**以对应模板为准**：
 
-- **concept 页**：`## 相关实体` → `## 关联概念` → `## 溯源来源`
-- **entity 页**：`## 关联概念` → `## 相关实体` → `## 溯源来源`
+- **concept 页**：`## 相关实体` → `## 关联概念` → `## 关联流程` → `## 关联规则` → `## 溯源来源`
+- **entity 页**：`## 关联概念` → `## 相关实体` → `## 关联流程` → `## 关联规则` → `## 溯源来源`
+- **procedure 页**：`## 涉及概念` → `## 相关规则` → `## 溯源来源`
+- **rule 页**：`## 约束实体` → `## 触发流程` → `## 溯源来源`
 - **summary 页**：`## 与其他素材的关联` → `## 原文精彩摘录` → `## 相关页面` → `## 溯源来源`
 - **synthesis 页**：`## 涉及概念` → `## 参考资料`
 - **comparison 页**：`## 关联链接` → `## 相似的对比`

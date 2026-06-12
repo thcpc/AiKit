@@ -10,78 +10,44 @@
 
 ## 目录结构
 
-```
-$WIKI_ROOT/
-├── raw/                    # 原始素材
-│   ├── articles/           # 网页文章
-│   ├── tweets/             # X/Twitter
-│   ├── wechat/             # 微信公众号
-│   ├── xiaohongshu/        # 小红书
-│   ├── zhihu/              # 知乎
-│   ├── pdfs/               # PDF
-│   ├── notes/              # 笔记
-│   └── assets/             # 图片等附件
-├── wiki/                   # 知识库
-│   ├── {topicName}/        # 文件名来自 topics.md
-│         ├── overview.md
-│         ├── index.md
-│         ├── entities/
-│         ├── concepts/
-│         ├── comparisons/
-│         ├── summaries/
-│         ├── synthesis/
-├── queries/                # 查询结果
-├── log.md                  # 操作日志
-├── topics.md               # 研究方向
-├── .wiki-cache.json        # 缓存（未来规划）
-└── .wiki-schema.md         # 本文件
-```
+详见 SKILL 的 `references/wiki-structure.md`（唯一标准，禁止增减层级）。
 
 ## 页面命名规范
 
-- 实体页：`wiki/{topicName}/entities/{名称}.md`
-- 概念页：`wiki/{topicName}/concepts/{概念名}.md`
-- 素材摘要：`wiki/{topicName}/summaries/{日期}-{短标题}.md`
-- 对比分析：`wiki/{topicName}/comparisons/{对比主题}.md`
-- 综合分析：`wiki/{topicName}/synthesis/{分析主题}.md`
-- 主题总览：`wiki/{topicName}/overview.md`
-- 主题索引：`wiki/{topicName}/index.md`
+详见 SKILL.md 的"页面命名规范"章节。
 
-## 交叉引用规范
+## 别名词表（Alias Table）
 
-- 页面间使用 `[[页面名]]` 语法（Obsidian 兼容的双向链接）
-- 素材引用格式：`[来源: 素材标题](../summaries/xxx.md)`
-- 每个页面底部维护"相关页面"列表
-
-## 页面格式规范
-
-每个 wiki 页面应包含：
+格式：每行一组同义词，用 `=` 分隔。
 
 ```
----
-tags: [标签1, 标签2]
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-sources: [关联素材列表]
----
-
-# 页面标题
-
-> 一句话摘要
-
-## 正文内容
-
-...
+（初始为空，随使用积累）
 ```
 
-### 底部关联章节（按页面类型区分）
+维护原则：
+- 只收录知识库里实际出现过的同义词
+- 每组控制在 5 个以内
+- 中英文混用时把最常用的放第一个
 
-不同类型的页面使用不同的底部关联章节，**以对应模板为准**，不得统一简化为"相关页面"：
+## 置信度标注规范
 
-- **concept 页**（概念页）：`## 相关实体` → `## 关联概念` → `## 溯源来源`
-- **entity 页**（实体页）：`## 关联概念` → `## 相关实体` → `## 溯源来源`
-- **summary 页**（摘要页）：`## 与其他素材的关联` → `## 原文精彩摘录` → `## 相关页面` → `## 溯源来源`
-- **synthesis 页**（综合分析）：`## 涉及概念` → `## 参考资料`
-- **comparison 页**（对比分析）：`## 关联链接` → `## 相似的对比`
-- **overview / index 页**：无强制底部关联章节
+每个 wiki 页面（concept/entity/procedure/rule/summary）的 frontmatter 必须包含 `confidence` 字段：
+
+```yaml
+---
+confidence: EXTRACTED   # 可回溯到原文的事实
+# 或
+confidence: INFERRED    # 从原文推断出的结论
+# 或
+confidence: AMBIGUOUS   # 原文表述模糊，难以确定含义
+# 或
+confidence: UNVERIFIED  # 无法在原文中找到依据
+---
+```
+
+⛔ lint 检查会统计各置信度数量，并要求抽查 EXTRACTED 条目的可回溯性。
+
+## Lint（健康检查）
+
+详细检查项见 SKILL 的 references/lint-checklist.md。
 

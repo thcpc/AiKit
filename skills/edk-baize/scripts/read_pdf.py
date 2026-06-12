@@ -10,9 +10,9 @@
   --outline-only  仅输出每页前 200 字符作为大纲预览
 
 示例：
-  py scripts/read_pdf.py raw/pdfs/spec.pdf
-  py scripts/read_pdf.py raw/pdfs/spec.pdf --pages 1-20
-  py scripts/read_pdf.py raw/pdfs/spec.pdf --outline-only
+  py scripts/read_pdf.py raw/pdfs/Define-XML-v2.1-Specification.pdf
+  py scripts/read_pdf.py raw/pdfs/Define-XML-v2.1-Specification.pdf --pages 1-20
+  py scripts/read_pdf.py raw/pdfs/Define-XML-v2.1-Specification.pdf --outline-only
 """
 
 import sys
