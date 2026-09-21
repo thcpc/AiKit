@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "playwright-test": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server"
+      ],
+      "tools": [
+        "*"
+      ],
+      "autoApprove": [
+        "browser_navigate",
+        "browser_click",
+        "browser_snapshot",
+        "browser_fill_form",
+        "browser_close",
+        "planner_setup_page",
+        "browser_wait_for",
+        "generator_setup_page",
+        "browser_verify_text_visible",
+        "browser_evaluate",
+        "browser_verify_element_visible",
+        "browser_type",
+        "browser_verify_value",
+        "generator_read_log",
+        "generator_write_test",
+        "test_run",
+        "browser_run_code",
+        "browser_verify_list_visible",
+        "browser_open",
+        "browser_press_key",
+        "browser_install",
+        "test_list",
+        "test_debug"
+      ]
+    },
+    "xmind-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@41px/mcp-xmind",
+        "D:\\repository\\github\\AiKit"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "extract_node"
+      ],
+      "transport": "stdio"
+    }
+  }
+}
